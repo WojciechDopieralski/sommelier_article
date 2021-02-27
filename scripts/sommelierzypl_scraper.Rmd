@@ -38,7 +38,7 @@ full_sommelier_df <- data.frame(ssp_id = integer(),
                                    company = character(), 
                                    city = character())
 
-for (city in city_vector_clean[32:36]) {
+for (city in city_vector_clean) {
   Sys.sleep(runif(1, 1.0, 3))
   
   city_filter_html <- xml2::read_html(paste0(sommelier_url, "?field_city_value_selective=", city))
@@ -53,12 +53,13 @@ for (city in city_vector_clean[32:36]) {
 
   if (pagination_len != 0) {
     page_vector <- c(1:(pagination_len - 3))
-    for (page in page_vector)
+    for (page in page_vector) {
       Sys.sleep(runif(1, 1.0, 3))
       
       city_filter_html <- xml2::read_html(paste0(sommelier_url, "?field_city_value_selective=", city, "&page=", page))
       city_sommelier_df <- get_sommelier_data(city_filter_html, city)
       full_sommelier_df <- dplyr::bind_rows(full_sommelier_df, city_sommelier_df)
+    }
   }
 }
 
