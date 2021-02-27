@@ -1,0 +1,120 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+
+
+```{r libraries}
+library(data.table)
+library(rvest)
+library(tidyverse)
+library(here)
+```
+
+
+```{r create_city_vector}
+
+sommelier_url <- "http://sommelierzy.pl/nasi-czlonkowie"
+
+sommelier_list_base_html <-  xml2::read_html(sommelier_url)
+
+city_vector_dirty <- sommelier_list_base_html %>%
+  html_node(xpath = '//*[@id="edit-field-city-value-selective"]') %>%
+  html_children() %>%
+  html_attr("value") 
+  
+usless_locations <- c("All", "Dublin, Irlandia ", "Seattle, USA", "Langho", "Langho, Wielka Brytania", "Leeds", "Vitalia Hotel&Resort")
+
+city_vector_clean <- city_vector_dirty[!(city_vector_dirty %in% usless_locations)] %>%
+  str_replace(" ", "+")
+
+```
+
+
+```{r scrape_main_page_info}
+full_sommelier_df <- data.frame(ssp_id = integer(), 
+                                   name = character(), 
+                                   company = character(), 
+                                   city = character())
+
+for (city in city_vector_clean[32:36]) {
+  Sys.sleep(runif(1, 1.0, 3))
+  
+  city_filter_html <- xml2::read_html(paste0(sommelier_url, "?field_city_value_selective=", city))
+  
+  pagination_len <- city_filter_html %>%
+    html_nodes(css = "ul.pagination") %>%
+    html_children() %>%
+    length()
+
+  city_sommelier_df <- get_sommelier_data(city_filter_html, city)
+  full_sommelier_df <- dplyr::bind_rows(full_sommelier_df, city_sommelier_df)
+
+  if (pagination_len != 0) {
+    page_vector <- c(1:(pagination_len - 3))
+    for (page in page_vector)
+      Sys.sleep(runif(1, 1.0, 3))
+      
+      city_filter_html <- xml2::read_html(paste0(sommelier_url, "?field_city_value_selective=", city, "&page=", page))
+      city_sommelier_df <- get_sommelier_data(city_filter_html, city)
+      full_sommelier_df <- dplyr::bind_rows(full_sommelier_df, city_sommelier_df)
+  }
+}
+
+```
+
+
+```{r function}
+
+get_sommelier_id <- function (city_html) {
+  sommelier_ssp_id <- city_html %>%
+    html_nodes(xpath = '//*[@id="block-system-main"]/div/div[3]/div/a') %>%
+    html_attr('href') %>%
+    str_match_all("[0-9]+") %>%
+    unlist() %>%
+    as.integer()
+  
+  return(sommelier_ssp_id)
+}
+
+get_sommelier_name <- function (city_html) {
+  sommelier_full_names <- city_html %>%
+    html_nodes(css = "div.views-field.views-field-name") %>%
+    html_text() %>%
+    tail(length(.) - 1) %>%
+    str_trim(side = "both")
+  
+  return(sommelier_full_names)
+}
+  
+get_sommelier_company <- function(city_html) {
+  sommelier_companies <- city_html %>%
+    html_nodes(css = "div.views-field.views-field-field-company") %>%
+    html_text() %>% 
+    tail(length(.) - 1) %>%
+    str_trim(side = "both")
+  
+  return(sommelier_companies)
+}
+  
+get_sommelier_data <- function(city_html, city) {
+  
+  sommelier_ssp_id <- get_sommelier_id(city_html)
+  sommelier_full_names <- get_sommelier_name(city_html)
+  sommelier_companies <- get_sommelier_company(city_html)
+  sommelier_city <- rep(city, length(sommelier_companies))
+  
+  city_sommelier_df <- data.frame(ssp_id = sommelier_ssp_id,
+    name = sommelier_full_names,
+    company = sommelier_companies, 
+    city = sommelier_city,
+    stringsAsFactors = FALSE) %>%
+    mutate_all(na_if,"")
+  
+  return(city_sommelier_df)
+}
+
+
+```
+
