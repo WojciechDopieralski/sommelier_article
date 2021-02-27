@@ -24,7 +24,7 @@ city_vector_dirty <- sommelier_list_base_html %>%
   html_children() %>%
   html_attr("value") 
   
-usless_locations <- c("All", "Dublin, Irlandia ", "Seattle, USA", "Langho", "Langho, Wielka Brytania", "Leeds", "Vitalia Hotel&Resort")
+usless_locations <- c("All", "Dublin, Irlandia ", "Seattle, USA", "Langho", "Langho, Wielka Brytania", "Leeds", "Londyn", "Vitalia Hotel&Resort")
 
 city_vector_clean <- city_vector_dirty[!(city_vector_dirty %in% usless_locations)] %>%
   str_replace(" ", "+")
@@ -62,7 +62,19 @@ for (city in city_vector_clean) {
     }
   }
 }
+```
 
+
+```{r save_data}
+celan_data_path <- paste0(here(),"/data/clean/")
+
+today_date <- lubridate::today() %>%
+  as.character() %>%
+  str_replace_all("-", "")
+
+sommelier_file_name <- paste0(celan_data_path, today_date, "_sommelier.xlsx")
+
+write_excel_csv(full_sommelier_df, sommelier_file_name)
 ```
 
 
