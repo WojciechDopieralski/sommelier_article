@@ -65,6 +65,18 @@ for (city in city_vector_clean) {
 ```
 
 
+```{r add_columns_with_data}
+
+full_sommelier_df <- full_sommelier_df %>%
+  mutate(last_letter = str_sub(name, -1),
+         is_women = ifelse(last_letter == "a", 1, 0)) 
+
+
+
+
+```
+
+
 ```{r save_data}
 celan_data_path <- paste0(here(),"/data/clean/")
 
@@ -79,7 +91,6 @@ write_excel_csv(full_sommelier_df, sommelier_file_name)
 
 
 ```{r function}
-
 get_sommelier_id <- function (city_html) {
   sommelier_ssp_id <- city_html %>%
     html_nodes(xpath = '//*[@id="block-system-main"]/div/div[3]/div/a') %>%
@@ -127,6 +138,10 @@ get_sommelier_data <- function(city_html, city) {
   
   return(city_sommelier_df)
 }
+```
+
+
+```{r}
 
 
 ```
